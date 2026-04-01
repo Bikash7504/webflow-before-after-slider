@@ -1,0 +1,31 @@
+<style>
+.c-slider_wrapper {
+  touch-action: pan-y; /* Prevents vertical scrolling while sliding on mobile */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Ensure the "After" image stays the full width of the container even when clipped */
+.c-slider_after {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  display: block;
+}
+
+.c-slider_handle {
+  cursor: ew-resize;
+  transform: translateX(-50%);
+}
+
+.c-slider_handle-button {
+  /* Style your button here or in Webflow */
+  pointer-events: none; /* Let the parent handle handle the clicks */
+}
+
+/* Focus state for Accessibility */
+.c-slider_handle:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 4px;
+}
+</style>

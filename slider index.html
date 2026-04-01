@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Before/After Slider - Technical Assignment</title>
+    
+    <style>
+        /* Base Styles */
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Slider Container */
+        .c-slider_wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Limits size on desktop */
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            touch-action: pan-y;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Images */
+        .c-slider_before {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .c-slider_after-wrap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%; /* Starting position */
+            height: 100%;
+            overflow: hidden;
+            z-index: 2;
+            border-right: 2px solid white; /* The "line" can also be the border */
+        }
+
+        .c-slider_after {
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* CRITICAL: The image width must match the parent's full width, not the clip width */
+            width: 800px; 
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Handle */
+        .c-slider_handle {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: white;
+            z-index: 3;
+            transform: translateX(-50%);
+            cursor: ew-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .c-slider_handle-button {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            pointer-events: none; /* Let clicks pass through to the handle line */
+        }
+
+        /* Icon arrows */
+        .c-slider_handle-button::before {
+            content: '↔';
+            color: #333;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .c-slider_handle:focus {
+            outline: 3px solid #4A90E2;
+            outline-offset: 5px;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 800px) {
+            .c-slider_after {
+                width: 100vw; /* On mobile, use viewport width to keep images aligned */
+            }
+        }
+        
+        @media (max-width: 390px) {
+            .c-slider_wrapper {
+                aspect-ratio: 4 / 5; /* Taller ratio for small mobile devices */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="c-slider_wrapper">
+        <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070" 
+             alt="Landscape Before" class="c-slider_before">
+
+        <div class="c-slider_after-wrap">
+            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&sat=-100" 
+                 alt="Landscape After" class="c-slider_after">
+        </div>
+
+        <div class="c-slider_handle" role="slider" tabindex="0" aria-label="Image comparison slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+            <div class="c-slider_handle-button"></div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script>
+        class BeforeAfterSlider {
+            constructor(container) {
+                this.container = container;
+                this.afterWrap = container.querySelector('.c-slider_after-wrap');
+                this.afterImg = container.querySelector('.c-slider_after');
+                this.handle = container.querySelector('.c-slider_handle');
+                this.isActive = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.syncImageWidth();
+                window.addEventListener('resize', () => this.syncImageWidth());
+                this.addEventListeners();
+                this.initGSAP();
+            }
+
+            // Ensures the 'after' image stays the same size as the container
+            syncImageWidth() {
+                const width = this.container.offsetWidth;
+                this.afterImg.style.width = width + 'px';
+            }
+
+            updateSlider(xPos) {
+                const rect = this.container.getBoundingClientRect();
+                let percentage = ((xPos - rect.left) / rect.width) * 100;
+                
+                if (percentage < 0) percentage = 0;
+                if (percentage > 100) percentage = 100;
+
+                this.afterWrap.style.width = `${percentage}%`;
+                this.handle.style.left = `${percentage}%`;
+                this.handle.setAttribute('aria-valuenow', Math.round(percentage));
+            }
+
+            addEventListeners() {
+                // Mouse
+                this.handle.addEventListener('mousedown', () => this.isActive = true);
+                window.addEventListener('mouseup', () => this.isActive = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isActive) return;
+                    this.updateSlider(e.pageX);
+                });
+
+                // Touch
+                this.handle.addEventListener('touchstart', () => this.isActive = true);
+                window.addEventListener('touchend', () => this.isActive = false);
+                window.addEventListener('touchmove', (e) => {
+                    if (!this.isActive) return;
+                    this.updateSlider(e.touches[0].pageX);
+                }, { passive: true });
+
+                // Keyboard
+                this.handle.addEventListener('keydown', (e) => {
+                    let currentVal = parseFloat(this.handle.style.left) || 50;
+                    if (e.key === 'ArrowLeft') this.update(currentVal - 5);
+                    if (e.key === 'ArrowRight') this.update(currentVal + 5);
+                });
+            }
+
+            update(val) {
+                const rect = this.container.getBoundingClientRect();
+                this.updateSlider(rect.left + (rect.width * val / 100));
+            }
+
+            initGSAP() {
+                gsap.registerPlugin(ScrollTrigger);
+                const tl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: this.container,
+                        start: "top 80%",
+                    }
+                });
+
+                // Entrance Tease Animation
+                tl.to([this.handle, this.afterWrap], {
+                    left: (i, el) => el.classList.contains('c-slider_handle') ? "30%" : "0%", 
+                    width: (i, el) => el.classList.contains('c-slider_after-wrap') ? "30%" : "",
+                    duration: 0.8,
+                    ease: "power2.inOut"
+                })
+                .to([this.handle, this.afterWrap], {
+                    left: (i, el) => el.classList.contains('c-slider_handle') ? "50%" : "0%",
+                    width: (i, el) => el.classList.contains('c-slider_after-wrap') ? "50%" : "",
+                    duration: 0.6,
+                    ease: "power2.out"
+                });
+            }
+        }
+
+        // Run
+        document.addEventListener('DOMContentLoaded', () => {
+            const sliders = document.querySelectorAll('.c-slider_wrapper');
+            sliders.forEach(slider => new BeforeAfterSlider(slider));
+        });
+    </script>
+</body>
+</html>
